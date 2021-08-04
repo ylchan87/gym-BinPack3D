@@ -5,8 +5,8 @@ from gym.utils import seeding
 import numpy as np
 import copy
 
-from Container import Container, Box
-from BoxSeqGenerator import BoxSeqGenerator, RandomBoxCreator, CuttingBoxCreator, Rotate
+from gym_BinPack3D.envs.Container import Container, Box
+from gym_BinPack3D.envs.BoxSeqGenerator import BoxSeqGenerator, RandomBoxCreator, CuttingBoxCreator, Rotate
 
 
 class PackingGame(gym.Env):
@@ -36,8 +36,17 @@ class PackingGame(gym.Env):
                     box_set = [Box(1,1,1), Box(2,3,4)], 
                     minSideLen = None,
                     maxSideLen = None,
+                    genValidPlacementMask = True,
                     #data_name = None,  #TODO: load saved box seq
                     **kwags):
+        """
+        Caveat: order in list "enabled_rotations" affects action meaning.
+        below should work, other orders probably not
+        [Rotate.NOOP]
+        [Rotate.NOOP, Rotate.XY]
+        [Rotate.NOOP, Rotate.XY, Rotate.XZ]
+        [Rotate.NOOP, Rotate.XY, Rotate.XZ, Rotate.YZ]
+        """
 
         self.container_size = container_size
         self.container_area = int(self.container_size[0] * self.container_size[1])
@@ -66,11 +75,18 @@ class PackingGame(gym.Env):
                                                          )
         assert isinstance(self.boxSeqGenerator, BoxSeqGenerator)    
 
+        self.genValidPlacementMask = genValidPlacementMask
+
+        obsSpace = {
+            "height_map"   : gym.spaces.Box(low=0.0, high=self.container_size[2], shape=(self.container_size[0],self.container_size[1]) ),
+            "coming_boxes" : gym.spaces.Box(low=0.0, high=max(self.container_size), shape=(self.n_foreseeable_box,3) ),
+        }
+
+        if self.genValidPlacementMask:
+            obsSpace["valid_placement_mask"] = gym.spaces.MultiBinary( [len(self.enabled_rotations), self.container_size[0],self.container_size[1] ])
+
         self.action_space = gym.spaces.MultiDiscrete( [self.container_area, len(self.enabled_rotations)] )
-        self.observation_space = gym.spaces.Dict({
-                "height_map"   : gym.spaces.Box(low=0.0, high=self.container_size[2], shape=(self.container_size[0],self.container_size[1]) ),
-                "coming_boxes" : gym.spaces.Box(low=0.0, high=max(self.container_size), shape=(self.n_foreseeable_box,3) ),
-            })
+        self.observation_space = gym.spaces.Dict(obsSpace)
         
 
     #def get_box_ratio(self):
@@ -99,19 +115,32 @@ class PackingGame(gym.Env):
     def cur_observation(self):
         hmap = self.container.heightMap
         coming_boxes = self.boxSeqGenerator.next_N_boxes()
+        firstBox = coming_boxes[0]
         coming_boxes = np.array([(b.dx,b.dy,b.dz) for b in coming_boxes], dtype=int)
-        return {
+
+        if self.genValidPlacementMask:
+            mask = []
+            for r in self.enabled_rotations:
+                b = copy.deepcopy(firstBox)
+                b.rotate(r)
+                mask.append( (self.container.get_possible_positions(b)>0).astype(np.int8) )
+            mask = np.array(mask)
+
+        obs =  {
                 "height_map"   : hmap,
                 "coming_boxes" : coming_boxes
                }
+        if self.genValidPlacementMask: obs["valid_placement_mask"] = mask
+        
+        return obs
 
     def step(self, action):
         position = self.actionIdx_to_position(action[0])
         rotation = action[1]
         box = self.boxSeqGenerator.next_N_boxes()[0]
-        if (rotation == Rotate.XY): box.lx, box.ly = box.ly, box.lx
-        if (rotation == Rotate.XZ): box.lx, box.lz = box.lz, box.lx
-        if (rotation == Rotate.YZ): box.ly, box.lz = box.lz, box.ly
+        if (rotation == Rotate.XY): box.dx, box.dy = box.dy, box.dx
+        if (rotation == Rotate.XZ): box.dx, box.dz = box.dz, box.dx
+        if (rotation == Rotate.YZ): box.dy, box.dz = box.dz, box.dy
 
         succeeded = self.container.drop_box(box, position)
 
@@ -132,7 +161,7 @@ class PackingGame(gym.Env):
         return self.cur_observation
 
     def render(self, mode='human'):
-        from VisUtil import plot_box
+        from gym_BinPack3D.envs.VisUtil import plot_box
         from mpl_toolkits.mplot3d import Axes3D
         from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
         import matplotlib.pyplot as plt

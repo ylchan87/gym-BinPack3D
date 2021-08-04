@@ -1,16 +1,10 @@
 import numpy as np
 import copy
-from Container import Box, Container
+from gym_BinPack3D.envs.Container import Box, Container, Rotate
 
-from enum import Enum
+
 
 #FIXME proper seed for rand nums
-
-class Rotate(Enum):
-   NOOP = 0  # a.k.a. No operation
-   XY  = 1
-   XZ  = 2
-   YZ  = 3
 
 class BoxSeqGenerator(object):
     def __init__(self, enabled_rotations = None, n_foreseeable_box = None, seed=None):
@@ -48,9 +42,7 @@ class BoxSeqGenerator(object):
     
     def _rotate_box(self, box):
         rotation = self.rng.choice(self.enabled_rotations)
-        if (rotation == Rotate.XY): box.dx, box.dy = box.dy, box.dx
-        if (rotation == Rotate.XZ): box.dx, box.dz = box.dz, box.dx
-        if (rotation == Rotate.YZ): box.dy, box.dz = box.dz, box.dy
+        box.rotate(rotation)
         return box
 
     def _gen_more_boxes(self):

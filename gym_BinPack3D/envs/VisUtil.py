@@ -3,7 +3,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 import matplotlib.pyplot as plt
 
-from Container import Box
+from gym_BinPack3D.envs.Container import Box
 
 def plot_parallelepiped(cube_definition, ax, color=None, showEdges=True):
     """

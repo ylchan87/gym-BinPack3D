@@ -1,8 +1,6 @@
+from enum import Enum
 import numpy as np
-from functools import reduce
-import copy, time
-
-from numpy.lib.function_base import percentile
+import copy
 
 """
     x: depth  (small x = deep inside, large x = near to viewer)
@@ -16,6 +14,12 @@ from numpy.lib.function_base import percentile
      /
     X
 """
+
+class Rotate(Enum):
+   NOOP = 0  # a.k.a. No operation
+   XY  = 1
+   XZ  = 2
+   YZ  = 3
 
 class Box(object):
     def __init__(self, dx, dy, dz, x=0, y=0, z=0):
@@ -32,6 +36,14 @@ class Box(object):
 
     def standardize(self):
         return tuple([self.dx, self.dy, self.dz, self.x, self.y, self.z])
+    
+    def rotate(self, rotation):
+        """
+        rotate this Box IN PLACE
+        """
+        if (rotation == Rotate.XY): self.dx, self.dy = self.dy, self.dx
+        if (rotation == Rotate.XZ): self.dx, self.dz = self.dz, self.dx
+        if (rotation == Rotate.YZ): self.dy, self.dz = self.dz, self.dy
     
     def __repr__(self):
         return f"Box: Size {self.dx} {self.dy} {self.dz} Position {self.x} {self.y} {self.z}"
