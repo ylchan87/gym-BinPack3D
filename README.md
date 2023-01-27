@@ -20,7 +20,7 @@ Code refactored from https://github.com/alexfrom0815/Online-3D-BPP-DRL
 The "CUT-1", "CUT-2" box seuence generator, and the box stability judgement follows rules as specified in Ref[1]
 
 ## Reference
-1. ![Online 3D Bin Packing with Constrained Deep Reinforcement Learning](https://arxiv.org/abs/2006.14978)
+1. [Online 3D Bin Packing with Constrained Deep Reinforcement Learning](https://arxiv.org/abs/2006.14978)
 
 2. https://github.com/alexfrom0815/Online-3D-BPP-DRL  (Repo of 1)
 
